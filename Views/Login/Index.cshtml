@@ -1,0 +1,39 @@
+@model blockchain.Models.LoginViewModel
+
+
+@{
+    Layout = null;
+}
+
+<html lang="en">
+<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+<body style="margin-top:150px">
+    <div class="container">
+        <div class="row text-danger">
+            <div class="col-xl-5 col-lg-6 col-md-8 col-sm-10 mx-auto text-center form p-3">
+                <h6 class="display-4 pt-2 mb-0 ">Charity<br />
+                    <h2 class="mb-4 "></h2>
+                </h6>
+                <div class="px-2 mt-2">
+                    <form asp-action="Index" asp-controller="Login" id="trigger-selection"
+                        class="justify-content-center" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="form-group">
+                            <input type="text" class="form-control text-center" placeholder="Username" id="username"
+                                autocomplete="off" required="required" asp-for="Username">
+                        </div>
+                        <div class="form-group">
+                            <input type="password" class="form-control text-center" placeholder="Password" id="password"
+                                autocomplete="off" required="required" asp-for="Password">
+                        </div>
+                        <button type="submit" class="btn btn-danger btn-md" id="launch-modal">Sign In</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
