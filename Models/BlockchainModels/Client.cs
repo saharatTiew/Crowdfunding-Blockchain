@@ -13,10 +13,8 @@ namespace blockchain.Models.BlockchainModels
     {
         // list of server that this specific client connect to
         private readonly IDictionary<string, WebSocket> wsDict = new Dictionary<string, WebSocket>();
-        // private int voteCount = 0;
         private StateType CurrentState = StateType.FOLLLOWER;
-        // private int CurrentLeader = 0;
-
+       
         public void Connect(string url)
         {
             if (!wsDict.ContainsKey(url))
@@ -24,7 +22,7 @@ namespace blockchain.Models.BlockchainModels
                 WebSocket ws = new WebSocket(url);
                 ws.OnMessage += (sender, e) => 
                 {
-                    Console.WriteLine(e.Data);
+                    // Console.WriteLine(e.Data);
                     if (e.Data == "Hi Client")
                     {
                         Console.WriteLine(e.Data);
@@ -38,7 +36,6 @@ namespace blockchain.Models.BlockchainModels
                     {
                         Program.CurrentLeader = Convert.ToInt32(e.Data.Split(" : ").Last());
                         CurrentState = StateType.FOLLLOWER;
-                        // Program.CoolDown--;
                         Broadcast($"New Leader : {Program.CurrentLeader}");
                     }
                     else if (e.Data == "GGGGGG")
@@ -55,16 +52,15 @@ namespace blockchain.Models.BlockchainModels
                             Console.WriteLine("OK");
                         }
                     }
-                    // else if (e.Data == "Voted")
-                    // {
-                    //     Console.WriteLine(e.Data);
-                    //     voteCount++;
-                    // }
-                    // else if (e.Data.StartsWith("Current"))
-                    // {
-                    //     CurrentLeader = Convert.ToInt32(e.Data.Split(" ").Last());
-                    //     CurrentState = StateType.FOLLLOWER;
-                    // }
+                    else if (e.Data.StartsWith("Verify :"))
+                    {
+                        string result = e.Data.Split(" : ").Last();
+                        if (result == "Approve")
+                            Program.ConfirmedNumber++;
+                        
+                        else
+                            Program.RejectedNumber++;
+                    }
                     else
                     {
                         Blockchain newChain = JsonConvert.DeserializeObject<Blockchain>(e.Data);
@@ -104,38 +100,6 @@ namespace blockchain.Models.BlockchainModels
                 item.Value.Send(data);
             }
         }
-
-        // public async Task InvokeVote()
-        // {
-        //     Random rnd = new Random();
-        //     await Task.Delay(rnd.Next(100, 250));
-        //     voteCount++;
-
-        //     CurrentState = StateType.CANDIDATE;
-        //     Broadcast("Voting Message");
-
-        //     while (voteCount < (int)Math.Ceiling((double)Program.NumNode / 2))
-        //     {
-        //         if (CurrentState != StateType.CANDIDATE)
-        //         {
-        //             break;
-        //         }
-
-        //         await Task.Delay(100);
-        //     }
-
-        //     voteCount = 0;
-            
-        //     if (CurrentState == StateType.CANDIDATE)
-        //     {
-        //         CurrentState = StateType.LEADER;     
-        //         Broadcast($"Current {Program.Port}");
-        //         while (voteCount < (int)Math.Ceiling((double)Program.NumNode / 2))
-        //         {
-        //             await Task.Delay(100);
-        //         }
-        //     }  
-        // }
 
         public void InvokeVote()
         {

@@ -8,19 +8,19 @@ namespace blockchain.Models.BlockchainModels
     public class Blockchain
     {
         public IList<Transaction> PendingTransactions { get; set; } = new List<Transaction>();
-        public IList<Block> Chain { get; set; }
+        public IList<BlockGeneric> Chain { get; set; }
         public int Difficulty { get; set; } = 2;
         public int Reward { get; set; } = 1; //1 cryptocurrency
 
         public void InitializeChain()
         {
-            Chain = new List<Block>();
+            Chain = new List<BlockGeneric>();
             AddGenesisBlock();
         }
 
-        public Block CreateGenesisBlock()
+        public BlockGeneric CreateGenesisBlock()
         {
-            Block block = new Block(DateTime.Now.ToUnixTimeStamp(), null, PendingTransactions);
+            BlockGeneric block = new BlockGeneric(DateTime.Now.ToUnixTimeStamp(), null, PendingTransactions);
             block.Mine(Difficulty);
             PendingTransactions = new List<Transaction>();
             return block;
@@ -31,7 +31,7 @@ namespace blockchain.Models.BlockchainModels
             Chain.Add(CreateGenesisBlock());
         }
 
-        public Block GetLatestBlock()
+        public BlockGeneric GetLatestBlock()
         {
             return Chain[Chain.Count - 1];
         }
@@ -43,16 +43,16 @@ namespace blockchain.Models.BlockchainModels
         
         public void ProcessPendingTransactions(string minerAddress)
         {
-            Block block = new Block(DateTime.Now.ToUnixTimeStamp(), GetLatestBlock().Hash, PendingTransactions);
+            BlockGeneric block = new BlockGeneric(DateTime.Now.ToUnixTimeStamp(), GetLatestBlock().Hash, PendingTransactions);
             AddBlock(block);
 
             PendingTransactions = new List<Transaction>();
             CreateTransaction(new Transaction(null, minerAddress, Reward, DateTime.Now.ToUnixTimeStamp()));
         }
 
-        public void AddBlock(Block block)
+        public void AddBlock(BlockGeneric block)
         {
-            Block latestBlock = GetLatestBlock();
+            BlockGeneric latestBlock = GetLatestBlock();
             block.Height = latestBlock.Height + 1;
             block.PreviousHash = latestBlock.Hash;
             block.Mine(this.Difficulty);
@@ -63,8 +63,8 @@ namespace blockchain.Models.BlockchainModels
         {
             for (int i = 1; i < Chain.Count; i++)
             {
-                Block currentBlock = Chain[i];
-                Block previousBlock = Chain[i - 1];
+                BlockGeneric currentBlock = Chain[i];
+                BlockGeneric previousBlock = Chain[i - 1];
 
                 if (currentBlock.Hash != currentBlock.CalculateHash())
                 {

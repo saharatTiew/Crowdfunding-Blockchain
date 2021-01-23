@@ -1,6 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using blockchain.Data;
+using blockchain.Providers;
+using blockchain.Providers.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using WebSocketSharp;
 using WebSocketSharp.Server;
@@ -11,6 +16,7 @@ namespace blockchain.Models.BlockchainModels
     {
         private bool IsChainSynced = false;
         private WebSocketServer wss = null;
+        private static ApplicationDbContext _dbContext;
 
         public void Start()
         {
@@ -19,6 +25,14 @@ namespace blockchain.Models.BlockchainModels
             wss.AddWebSocketService<Server>("/Blockchain");
             wss.Start();
             Console.WriteLine($"Started server at ws://127.0.0.1:{port}");
+
+            var services = new ServiceCollection();
+            services.AddTransient<IHashProvider, HashProvider>();
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlServer("Server=localhost; Database=BlockchainCharity; Trusted_Connection=True; MultipleActiveResultSets=True;"));
+
+            var serviceProvider = services.BuildServiceProvider();
+            _dbContext = serviceProvider.GetService<ApplicationDbContext>();
         }
 
         public void Test()
@@ -31,10 +45,7 @@ namespace blockchain.Models.BlockchainModels
 
         public void BroadcastLeader()
         {
-            // CASE : NOT WORK
-            // Send("GGGGGG");
             wss.WebSocketServices.Broadcast($"New Leader : {Program.Port}");
-            // Sessions.Broadcast("GGGGGG");
         }
 
         protected override void OnMessage(MessageEventArgs e)
@@ -85,6 +96,33 @@ namespace blockchain.Models.BlockchainModels
             else if (e.Data == "Decrease Cooldown")
             {
                 Program.CoolDown--;
+            }
+            else if (e.Data.StartsWith("Verify : "))
+            {
+                var serealizedTransaction = e.Data.Split(" : ").Last();
+                var transaction = JsonConvert.DeserializeObject<Transaction>(serealizedTransaction);
+
+                var fromUser = _dbContext.Users.FirstOrDefault(x => x.Username == transaction.FromAddress);
+                var moneyLeft = fromUser.RemainingMoney;
+
+                if (moneyLeft < transaction.Amount)
+                    Send("Verify : Approve");
+    
+                else
+                    Send("Verify : Reject");
+            }
+            else if (e.Data.StartsWith("New Block"))
+            {
+                var serealizedBlock = e.Data.Split(" : ").Last();
+                var block = JsonConvert.DeserializeObject<BlockGeneric>(serealizedBlock);
+
+                var isValid = false;
+
+                if (isValid)
+                    Send("Verify : Approve");
+    
+                else
+                    Send("Verify : Reject");
             }
             else
             {

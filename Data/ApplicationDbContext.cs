@@ -12,6 +12,7 @@ namespace blockchain.Data
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<Foundation> Foundations { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<BlockGeneric> Blockchains { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -25,6 +26,9 @@ namespace blockchain.Data
 
             builder.Entity<User>()
                    .ToTable("Users");
+
+            builder.Entity<BlockGeneric>()
+                   .ToTable("BlockchainsValidator1");
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

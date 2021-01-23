@@ -9,17 +9,35 @@ using blockchain.Models;
 using blockchain.Data;
 using blockchain.Models.BlockchainModels;
 using blockchain.Enums;
+using Microsoft.AspNetCore.SignalR;
+using blockchain.SignalR;
 
 namespace blockchain.Controllers
 {
     public class LoginController : BaseController
     {
-        public LoginController(ApplicationDbContext db) : base(db) { }
+        private readonly IHubContext<DonateHub, IHubProvider> _hub;
+        public LoginController(ApplicationDbContext db, IHubContext<DonateHub, IHubProvider> hub) : base(db) 
+        { 
+            _hub = hub;
+        }
 
         public IActionResult Index()
         {
             return View(new LoginViewModel());
         }
+
+        // public async Task<IActionResult> AAA()
+        // {
+        //     var isReceived = false;
+        //     var port = 0;
+        //     await _hub.Clients.Group("Donate").SendTransaction("sss");
+        //     // while (!isReceived)
+        //     // {
+        //     //     await Task.Delay(20);
+        //     // }
+        //     return Json("sss");
+        // }
 
         [HttpPost]
         [ValidateAntiForgeryToken]

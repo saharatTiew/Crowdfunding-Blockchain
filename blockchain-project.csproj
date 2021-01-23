@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DotNext.AspNetCore.Cluster" Version="2.12.1" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="3.1.11" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
     <PackageReference Include="WebSocketSharp-netstandard" Version="1.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers" Version="3.1.5" />

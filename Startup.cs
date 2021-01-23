@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using blockchain.Data;
+using blockchain.Providers;
+using blockchain.Providers.Interfaces;
+using blockchain.SignalR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -27,6 +30,9 @@ namespace blockchain
         {
             services.AddControllersWithViews();
 
+            services.AddSignalR();
+
+            services.AddTransient<IHashProvider, HashProvider>();
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("LocalConnection")));
         }
@@ -56,6 +62,8 @@ namespace blockchain
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Login}/{action=Index}");
+
+                endpoints.MapHub<DonateHub>("/donateHub");
             });
         }
     }

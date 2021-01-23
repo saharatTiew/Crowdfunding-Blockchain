@@ -37,9 +37,9 @@ namespace blockchain.Models.BlockchainModels
             UnixTimeStamp = timestamp;
         }
 
-        public void HashTransaction()
-        {
-            this.HashedTransactionId = _hashProvider.CalculateHash($"{this.FromAddress}-{this.ToAddress}-{this.Amount}-{this.UnixTimeStamp}");
-        }
+        // public void HashTransaction()
+        // {
+        //     this.HashedTransactionId = _hashProvider.CalculateHash($"{this.FromAddress}-{this.ToAddress}-{this.Amount}-{this.UnixTimeStamp}");
+        // }
     }
 }

@@ -9,12 +9,19 @@ using blockchain.Models;
 using blockchain.Data;
 using blockchain.Models.BlockchainModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.SignalR;
+using blockchain.SignalR;
+using blockchain.Extensions;
 
 namespace blockchain.Controllers
 {
     public class DonateController : BaseController
     {
-        public DonateController(ApplicationDbContext db) : base(db) { }
+        private readonly IHubContext<DonateHub, IHubProvider> _hub;
+        public DonateController(ApplicationDbContext db, IHubContext<DonateHub, IHubProvider> hub) : base(db) 
+        { 
+            _hub = hub;
+        }
 
         public IActionResult Index()
         {
@@ -41,11 +48,13 @@ namespace blockchain.Controllers
                                   {
                                       FromAddress = model.FromAddress,
                                       ToAddress = model.ToAddress,
-                                      Amount = model.Amount
+                                      Amount = model.Amount,
+                                      UnixTimeStamp = DateTime.Now.ToUnixTimeStamp()
                                   };
-                
-                _db.Transactions.Add(transaction);
-                await _db.SaveChangesAsync();
+
+                await _hub.Clients.Group("Donate").SendTransaction(transaction);
+                // _db.Transactions.Add(transaction);
+                // await _db.SaveChangesAsync();
                 return Json("done");
             }
 
