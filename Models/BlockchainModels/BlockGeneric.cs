@@ -7,18 +7,20 @@ using System.Text;
 
 namespace blockchain.Models.BlockchainModels
 {
-    public class BlockGeneric
+    public abstract class BlockGeneric
     {
         public long id { get; set; }
         public int Height { get; set; }
         public int UnixTimeStamp { get; set; }
-        public int BlockSize { get; set; } = 10;
+        public int BlockSize { get; set; }
+        [NotMapped]
+        public int MaxBlockSize { get; set; } = 10;
         public string PreviousHash { get; set; }
         public string Hash { get; set; }
-        public string HashedBy { get; set; }
+        public string VerifiedBy { get; set; }
         public string TransactionJsons { get; set; }
 
-        [NotMapped]
+        [NotMapped, JsonIgnore]
         public IList<Transaction> Transactions { get; set; }
 
         public BlockGeneric()

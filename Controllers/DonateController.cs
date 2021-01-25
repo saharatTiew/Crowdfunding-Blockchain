@@ -47,15 +47,14 @@ namespace blockchain.Controllers
                 var transaction = new Transaction
                                   {
                                       FromAddress = model.FromAddress,
-                                      ToAddress = model.ToAddress,
+                                      ToAddress = _db.Foundations.OrderBy(x => x.id).LastOrDefault()?.NameEn,
+                                      IntendedFoundation = model.ToAddress,
                                       Amount = model.Amount,
                                       UnixTimeStamp = DateTime.Now.ToUnixTimeStamp()
                                   };
 
                 await _hub.Clients.Group("Donate").SendTransaction(transaction);
-                // _db.Transactions.Add(transaction);
-                // await _db.SaveChangesAsync();
-                return Json("done");
+                return Json("Donate Is Pending...");
             }
 
             return RedirectToAction(nameof(Index));

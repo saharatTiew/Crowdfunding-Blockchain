@@ -7,7 +7,7 @@ using System.Text;
 
 namespace blockchain.Models.BlockchainModels
 {
-    public class Block1 : BlockGeneric
+    public class Block2 : BlockGeneric
     {
 
     }

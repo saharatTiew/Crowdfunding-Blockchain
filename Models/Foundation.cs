@@ -10,6 +10,7 @@ namespace blockchain.Models
         public string NameEn { get; set; }
         public DateTime? Deadline { get; set; }
         public float DonateGoal { get; set; }
-        public float CurrentAmount { get; set; }
+        public float TotalUnDonate { get; set; }
+        public float TotalDonate { get; set; }
     }
 }

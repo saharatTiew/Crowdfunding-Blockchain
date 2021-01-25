@@ -3,15 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using blockchain.Data;
 
 namespace blockchain_project.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20210123142846_RenameFromHashedByToVerifiedBy")]
+    partial class RenameFromHashedByToVerifiedBy
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -125,8 +127,8 @@ namespace blockchain_project.Migrations
                         .HasColumnType("bigint")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-                    b.Property<float>("Amount")
-                        .HasColumnType("real");
+                    b.Property<int>("Amount")
+                        .HasColumnType("int");
 
                     b.Property<string>("FromAddress")
                         .HasColumnType("nvarchar(max)");
@@ -134,13 +136,7 @@ namespace blockchain_project.Migrations
                     b.Property<string>("HashedTransactionId")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("IntendedFoundation")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<bool>("IsCommitted")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDonated")
                         .HasColumnType("bit");
 
                     b.Property<string>("ToAddress")
@@ -161,6 +157,9 @@ namespace blockchain_project.Migrations
                         .HasColumnType("bigint")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
+                    b.Property<float>("CurrentAmount")
+                        .HasColumnType("real");
+
                     b.Property<DateTime?>("Deadline")
                         .HasColumnType("datetime2");
 
@@ -169,12 +168,6 @@ namespace blockchain_project.Migrations
 
                     b.Property<string>("NameEn")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<float>("TotalDonate")
-                        .HasColumnType("real");
-
-                    b.Property<float>("TotalUnDonate")
-                        .HasColumnType("real");
 
                     b.HasKey("id");
 

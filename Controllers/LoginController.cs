@@ -27,18 +27,6 @@ namespace blockchain.Controllers
             return View(new LoginViewModel());
         }
 
-        // public async Task<IActionResult> AAA()
-        // {
-        //     var isReceived = false;
-        //     var port = 0;
-        //     await _hub.Clients.Group("Donate").SendTransaction("sss");
-        //     // while (!isReceived)
-        //     // {
-        //     //     await Task.Delay(20);
-        //     // }
-        //     return Json("sss");
-        // }
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult Index(LoginViewModel model)
@@ -49,13 +37,13 @@ namespace blockchain.Controllers
             Program.Name = model.Username;
 
             if (role == RoleType.VALIDATOR.ToStringValue())
-                return RedirectToAction(nameof(MineController.Index), "Mine");
+                return RedirectToAction(nameof(DonateController.Index), "Donate");
             
             else if (role == RoleType.DONOR.ToStringValue())
                 return RedirectToAction(nameof(DonateController.Index), "Donate");
             
             else if (role == RoleType.ORGANIZER.ToStringValue())
-                return Json("");
+                return RedirectToAction(nameof(DonateController.Index), "Donate");
             
             else
                 return Json("Failed");

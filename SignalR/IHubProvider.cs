@@ -11,5 +11,8 @@ namespace blockchain.SignalR
         Task NotifyLeader(string leaderPort);
         Task AskLeader();
         Task SendTransaction(Transaction transactionJson);
+        Task SendTransaction2(Transaction transactionJson);
+        Task DonateToFoundation(Transaction transaction);
+        Task Test(string sss);
     }
 }

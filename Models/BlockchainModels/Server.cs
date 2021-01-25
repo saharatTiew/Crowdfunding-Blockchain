@@ -17,6 +17,8 @@ namespace blockchain.Models.BlockchainModels
         private bool IsChainSynced = false;
         private WebSocketServer wss = null;
         private static ApplicationDbContext _dbContext;
+        private static IHashProvider _hashProvider = new HashProvider();
+        private readonly IBlockchainProvider _blockchainProvider = new BlockchainProvider(_hashProvider);
 
         public void Start()
         {
@@ -29,18 +31,11 @@ namespace blockchain.Models.BlockchainModels
             var services = new ServiceCollection();
             services.AddTransient<IHashProvider, HashProvider>();
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer("Server=localhost; Database=BlockchainCharity; Trusted_Connection=True; MultipleActiveResultSets=True;"));
+                options.UseSqlServer("Server=localhost; Database=BlockchainCharity; Trusted_Connection=True; MultipleActiveResultSets=True;")
+                ,ServiceLifetime.Transient);
 
             var serviceProvider = services.BuildServiceProvider();
             _dbContext = serviceProvider.GetService<ApplicationDbContext>();
-        }
-
-        public void Test()
-        {
-            // CASE : NOT WORK
-            // Send("GGGGGG");
-            wss.WebSocketServices.Broadcast("GGGGGG");
-            // Sessions.Broadcast("GGGGGG");
         }
 
         public void BroadcastLeader()
@@ -48,29 +43,33 @@ namespace blockchain.Models.BlockchainModels
             wss.WebSocketServices.Broadcast($"New Leader : {Program.Port}");
         }
 
-        protected override void OnMessage(MessageEventArgs e)
+        public void BroadcastGGGGG()
         {
-            if (e.Data == "Hi Server")
+            wss.WebSocketServices.Broadcast($"GGGGG");
+        }
+
+        protected async override void OnMessage(MessageEventArgs e)
+        {
+            if (e.Data.StartsWith("Hi Server"))
             {
-                Console.WriteLine(e.Data);
-                Send("Hi Client");
-            }
-            else if (e.Data == "sss")
-            {
-                Console.WriteLine("Got ya");
+                var msgFrom = e.Data.Split(" : ").Last();
+                Console.WriteLine($"Port {msgFrom} connected with you....");
+                Send($"Hi Client : {Program.Port}");
             }
             else if (e.Data == "You Are Next Leader")
             {
-                Console.WriteLine("GOT SELECTED TO BE A LEADER!");
+                Console.WriteLine("Got randomly selected to be leader....");
                 Console.WriteLine($"Cooldown : {Program.CoolDown}");
                 if (Program.CoolDown > 0)
                 {
+                    Console.WriteLine("Cooldown Remain.....");
                     Send("Not Applicable For Leader");
                 }
                 else
                 {
-                    Console.WriteLine("Y");
+                    Console.WriteLine("I am New Leader....");
                     Program.CurrentLeader = Program.Port;
+                    await Program.JoinLeaderChannel();
                     Send($"I'm New Leader : {Program.Port}");
                 }
             }
@@ -80,7 +79,7 @@ namespace blockchain.Models.BlockchainModels
                 if (currentLeader != Program.Port)
                 {
                     Program.CurrentLeader = currentLeader;
-                    Console.WriteLine("OK");
+                    Console.WriteLine("New Leader is randomly selected....");
                 }
                 else
                 {
@@ -101,47 +100,142 @@ namespace blockchain.Models.BlockchainModels
             {
                 var serealizedTransaction = e.Data.Split(" : ").Last();
                 var transaction = JsonConvert.DeserializeObject<Transaction>(serealizedTransaction);
+                Console.WriteLine(serealizedTransaction);
+                var fromUser = await _dbContext.Users.FirstOrDefaultAsync(x => x.Username == transaction.FromAddress);
+                Console.WriteLine(JsonConvert.SerializeObject(fromUser));
 
-                var fromUser = _dbContext.Users.FirstOrDefault(x => x.Username == transaction.FromAddress);
-                var moneyLeft = fromUser.RemainingMoney;
-
-                if (moneyLeft < transaction.Amount)
-                    Send("Verify : Approve");
-    
+                if (transaction.FromAddress == (await _dbContext.Foundations.OrderBy(x => x.id).LastOrDefaultAsync()).NameEn)
+                {
+                    var amount = _dbContext.Transactions
+                                           .Where(x => !x.IsDonated
+                                                       && x.IntendedFoundation == transaction.IntendedFoundation)
+                                           .Sum(x => x.Amount);
+                    
+                    if (amount == transaction.Amount)
+                    {
+                        Send("Verify : Approve");
+                        Console.WriteLine("Approve This Transaction....");
+                    }
+                    else
+                    {
+                        Send("Verify : Reject");
+                        Console.WriteLine("Reject This Transaction....");
+                    }
+                }
                 else
-                    Send("Verify : Reject");
+                {
+                    var moneyLeft = fromUser.RemainingMoney;
+
+                    if (moneyLeft >= transaction.Amount)
+                    {
+                        Send("Verify : Approve");
+                        Console.WriteLine("Approve This Transaction....");
+                    }
+                    else
+                    {
+                        Send("Verify : Reject");
+                        Console.WriteLine("Reject This Transaction....");
+                    }
+                }
             }
             else if (e.Data.StartsWith("New Block"))
             {
                 var serealizedBlock = e.Data.Split(" : ").Last();
-                var block = JsonConvert.DeserializeObject<BlockGeneric>(serealizedBlock);
-
-                var isValid = false;
+                BlockGeneric newBlock;
+            
+                if (Program.Port == 2222)
+                {
+                    newBlock = JsonConvert.DeserializeObject<Block1>(serealizedBlock);
+                }
+                else if (Program.Port == 2223)
+                {
+                    newBlock = JsonConvert.DeserializeObject<Block2>(serealizedBlock);
+                }
+                else
+                {
+                    newBlock = JsonConvert.DeserializeObject<Block3>(serealizedBlock);
+                }
+                // Console.WriteLine(serealizedBlock);
+                // Console.WriteLine(JsonConvert.SerializeObject(Program.chain.Last(), Formatting.Indented));
+                
+                var isValid = _blockchainProvider.IsBlockValid(Program.chain.Last(), newBlock);
 
                 if (isValid)
-                    Send("Verify : Approve");
-    
+                {
+                    Send("Transaction Verify : Approve");
+                    Console.WriteLine("Approve This Block....");
+                }
                 else
-                    Send("Verify : Reject");
+                {
+                    Send("Transaction Verify : Reject");
+                    Console.WriteLine("Reject This Block....");
+                }
+            }
+            else if (e.Data.StartsWith("Add Block to Chain"))
+            {
+                var serealizedBlock = e.Data.Split(" : ").Last();
+
+                if (Program.Port == 2222)
+                {
+                    var newBlock = JsonConvert.DeserializeObject<Block1>(serealizedBlock);
+                    newBlock.id = 0;
+                    await _dbContext.Blockchains1.AddAsync(newBlock);
+                }
+                else if (Program.Port == 2223)
+                {
+                    var newBlock = JsonConvert.DeserializeObject<Block2>(serealizedBlock);
+                    newBlock.id = 0;
+                    await _dbContext.Blockchains2.AddAsync(newBlock);
+                }
+                else
+                {
+                    var newBlock = JsonConvert.DeserializeObject<Block3>(serealizedBlock);
+                    newBlock.id = 0;
+                    await _dbContext.Blockchains3.AddAsync(newBlock);
+                }
+                await _dbContext.SaveChangesAsync();
+                Console.WriteLine("Add block to a chain...");
+                await Program.LoadChain();
+            }
+            else if (e.Data.StartsWith("Donate"))
+            {
+                Console.WriteLine("Confirmation to Donate!");
+                Send(e.Data);
             }
             else
             {
-                Blockchain newChain = JsonConvert.DeserializeObject<Blockchain>(e.Data);
+                List<BlockGeneric> newChain;
 
-                if (newChain.IsValid() && newChain.Chain.Count > Program.Blockchain.Chain.Count)
+                if (Program.Port == 2222)
                 {
-                    List<Transaction> newTransactions = new List<Transaction>();
-                    newTransactions.AddRange(newChain.PendingTransactions);
-                    newTransactions.AddRange(Program.Blockchain.PendingTransactions);
+                    var tempChain = JsonConvert.DeserializeObject<List<Block1>>(e.Data);
+                    newChain = tempChain.Cast<BlockGeneric>().ToList();
+                }
+                else if (Program.Port == 2223)
+                {
+                    var tempChain = JsonConvert.DeserializeObject<List<Block2>>(e.Data);
+                    newChain = tempChain.Cast<BlockGeneric>().ToList();
+                }
+                else
+                {
+                    var tempChain = JsonConvert.DeserializeObject<List<Block3>>(e.Data);
+                    newChain = tempChain.Cast<BlockGeneric>().ToList();
+                }
 
-                    newChain.PendingTransactions = newTransactions;
-                    Program.Blockchain = newChain;
+                // Console.WriteLine(JsonConvert.SerializeObject(Program.chain, Formatting.Indented));
+
+                if (_blockchainProvider.IsBlockchainValid(newChain) && newChain.Count > Program.chain.Count)
+                {
+                    Console.WriteLine("Updated Chain.....");
+                    Program.DeleteChains(newChain);
                 }
 
                 if (!IsChainSynced)
                 {
-                    Send(JsonConvert.SerializeObject(Program.Blockchain));
-                    IsChainSynced = true;
+                    // Console.WriteLine("Sending...");
+                    // Console.WriteLine(JsonConvert.SerializeObject(Program.chain));
+                    Send(JsonConvert.SerializeObject(Program.chain));
+                    // IsChainSynced = true;
                 }
             }
         }

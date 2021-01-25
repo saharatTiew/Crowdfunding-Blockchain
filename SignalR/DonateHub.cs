@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using blockchain.Models.BlockchainModels;
 using Microsoft.AspNetCore.SignalR;
 
 namespace blockchain.SignalR
@@ -19,6 +20,12 @@ namespace blockchain.SignalR
         public async Task NotifyLeader(string leaderPort)
         {
             await Clients.Group("Donate").NotifyLeader(leaderPort);
+        }
+
+        public async Task DonateToFoundation(Transaction transaction)
+        {
+            Console.WriteLine("Starting Donate to foundation.....");
+            await Clients.Group("Donate").SendTransaction(transaction);
         }
     }
 }
