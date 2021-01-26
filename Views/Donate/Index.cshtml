@@ -22,7 +22,7 @@
                         </div>
                         <div class="form-group">
                             <select class="form-control drop-down" asp-for="ToAddress">
-                                <option selected id="default-foundation" value="-1" disabled=false>Select Foundation
+                                <option selected id="default-foundation" value="-1" disabled=false>Select Project
                                 </option>
                                 @foreach (var item in @ViewBag.Foundations)
                                 {
@@ -33,6 +33,7 @@
                         <div class="form-group">
                             <input type="number" class="form-control" asp-for="Amount">
                         </div>
+                        <button type="button" class="btn btn-danger btn-md" onclick="Navigate()">Information</button>
                         <button type="submit" class="btn btn-danger btn-md">Submit</button>
                     </form>
                 </div>
@@ -43,3 +44,15 @@
 </body>
 
 </html>
+
+<script type="text/javascript">
+
+function Navigate()
+{
+    @* var fromAddress = @Model.FromAddress *@
+    var url = '@Url.Action("Transactions", "Donate", new {userName = @Model.FromAddress})';
+    window.location.href = url;
+}
+
+
+</script>

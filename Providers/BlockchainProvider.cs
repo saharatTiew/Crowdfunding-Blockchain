@@ -26,13 +26,13 @@ namespace blockchain.Providers
 
                 if (currentBlock.Hash != _hash.HashBlock(currentBlock))
                 {
-                    // Console.WriteLine("SSs");
+                    Console.WriteLine($"The hash of the block is invalid at height {i}");
                     return false;
                 }
 
                 if (currentBlock.PreviousHash != previousBlock.Hash)
                 {
-                    // Console.WriteLine("ddd");
+                    Console.WriteLine($"The previous hash of the block is invalid at height {i}");
                     return false;
                 }
             }

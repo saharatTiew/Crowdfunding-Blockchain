@@ -14,7 +14,6 @@ namespace blockchain.Models.BlockchainModels
     {
         // list of server that this specific client connect to
         private readonly IDictionary<string, WebSocket> wsDict = new Dictionary<string, WebSocket>();
-        private StateType CurrentState = StateType.FOLLLOWER;
         private readonly IBlockchainProvider _blockchainProvider;
         private readonly IHashProvider _hashProvider;
 
@@ -33,7 +32,6 @@ namespace blockchain.Models.BlockchainModels
                 WebSocket ws = new WebSocket(url);
                 ws.OnMessage += (sender, e) =>
                 {
-                    // Console.WriteLine(e.Data);
                     if (e.Data.StartsWith("Hi Client"))
                     {
                         var msgFrom = e.Data.Split(" : ").Last();
@@ -45,13 +43,11 @@ namespace blockchain.Models.BlockchainModels
                     }
                     else if (e.Data == "Not Applicable For Leader")
                     {
-                        CurrentState = StateType.FOLLLOWER;
                         InvokeVote();
                     }
                     else if (e.Data.StartsWith("I'm New Leader"))
                     {
                         Program.CurrentLeader = Convert.ToInt32(e.Data.Split(" : ").Last());
-                        CurrentState = StateType.FOLLLOWER;
                         Broadcast($"New Leader : {Program.CurrentLeader}");
                     }
                     else if (e.Data.StartsWith("New Leader"))
@@ -99,36 +95,50 @@ namespace blockchain.Models.BlockchainModels
                     }
                     else
                     {
+                        var information = e.Data.Split(" : ");
+                        var chain = information[2];
+                        var port = information[1];
+
                         List<BlockGeneric> newChain;
                         if (Program.Port == 2222)
                         {
-                            var tempChain = JsonConvert.DeserializeObject<List<Block1>>(e.Data);
+                            var tempChain = JsonConvert.DeserializeObject<List<Block1>>(chain);
                             newChain = tempChain.Cast<BlockGeneric>().ToList();
                         }
                         else if (Program.Port == 2223)
                         {
-                            var tempChain = JsonConvert.DeserializeObject<List<Block2>>(e.Data);
+                            var tempChain = JsonConvert.DeserializeObject<List<Block2>>(chain);
                             newChain = tempChain.Cast<BlockGeneric>().ToList();
                         }
                         else
                         {
-                            var tempChain = JsonConvert.DeserializeObject<List<Block3>>(e.Data);
+                            var tempChain = JsonConvert.DeserializeObject<List<Block3>>(chain);
                             newChain = tempChain.Cast<BlockGeneric>().ToList();
                         }
-
-                        // Console.WriteLine(JsonConvert.SerializeObject(Program.chain, Formatting.Indented));
-                        // Console.WriteLine(_blockchainProvider.IsBlockchainValid(newChain));
-
-                        if (_blockchainProvider.IsBlockchainValid(newChain) && newChain.Count > Program.chain.Count)
+                        // Console.WriteLine(JsonConvert.SerializeObject(newChain.TakeLast(5), Formatting.Indented));
+                        var isBlockchainValid = _blockchainProvider.IsBlockchainValid(newChain);
+                        // Console.WriteLine(isBlockchainValid);
+                        if (isBlockchainValid && newChain.Count > Program.Chain.Count)
                         {
                             Console.WriteLine("Updating new chain.....");
                             Program.DeleteChains(newChain);
                         }
+                        else if (!isBlockchainValid)
+                        {
+                            Console.WriteLine("The new chain is invalid...");
+                            Remove(port);
+                        }
+                        
                     }
                 };
                 ws.Connect();
+                if (!_blockchainProvider.IsBlockchainValid(Program.Chain))
+                {
+                    Console.WriteLine("The chain is invalid...");
+                    Program.IsChainValid = false;
+                }
                 ws.Send($"Hi Server : {Program.Port}");
-                ws.Send(JsonConvert.SerializeObject(Program.chain));
+                ws.Send($"From Port : {Program.Port} : {JsonConvert.SerializeObject(Program.Chain)}");
                 wsDict.Add(url, ws);
             }
         }
@@ -142,6 +152,11 @@ namespace blockchain.Models.BlockchainModels
                     item.Value.Send(data);
                 }
             }
+        }
+
+        public void Remove(string port)
+        {
+            wsDict.Remove($"{Program.SocketUrl}{port}/Blockchain");
         }
 
         public void Broadcast(string data)

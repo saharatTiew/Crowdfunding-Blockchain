@@ -1,23 +1,26 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Text.Json.Serialization;
 using blockchain.Providers.Interfaces;
 using Newtonsoft.Json;
 
 namespace blockchain.Models.BlockchainModels
 {
     public class Transaction
-    {   
-        [JsonIgnore]
+    {
+        // TODO : Hash fromAddress and toAddress
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public long id { get; set; }
         public string HashedTransactionId { get; set; }
         public string FromAddress { get; set; }
         public string ToAddress { get; set; }
         public int UnixTimeStamp { get; set; }
         public string IntendedFoundation { get; set; }
+        public int? BlockHeight { get; set; }
         public bool IsDonated { get; set; }
 
-        [JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public bool IsCommitted { get; set; }
         public float Amount { get; set; }
         private readonly IHashProvider _hashProvider;

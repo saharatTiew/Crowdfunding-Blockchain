@@ -25,9 +25,10 @@ namespace blockchain
         public static int Port = 0;
         public static Server Server = null;
         public static Client Client = null;
-        public static List<BlockGeneric> chain = new List<BlockGeneric>();
-        public static HubConnection signalRConnection = null;
-        
+        public static List<BlockGeneric> Chain = new List<BlockGeneric>();
+        public static HubConnection SignalRConnection = null;
+        public const string SocketUrl = "ws://127.0.0.1:";
+        public static bool IsChainValid = true;
         public static bool DoneConnecting = false;
         public static bool IsDonatable = false;
         public static Transaction TempDonateTransaction = null;
@@ -78,7 +79,7 @@ namespace blockchain
                     Server.Start();
 
                     // construct signalr connection
-                    signalRConnection = new HubConnectionBuilder()
+                    SignalRConnection = new HubConnectionBuilder()
                                             .WithUrl(new Uri("https://127.0.0.1:5001/donateHub"), options => 
                                             {
                                                 //bypass SSL on SignalR Client
@@ -97,47 +98,48 @@ namespace blockchain
 
                     
                     // subscribe on method SendTransaction
-                    signalRConnection.On<Transaction>("SendTransaction", async transaction =>
+                    SignalRConnection.On<Transaction>("SendTransaction", async transaction =>
                     {
                         await Validate(transaction);
                         // await ChangeLeader();
                         Client.Broadcast($"Decrease Cooldown");
                         Client.InvokeVote();
-                        await signalRConnection.InvokeAsync("RemoveFromGroup", "Donate");
+                        await SignalRConnection.InvokeAsync("RemoveFromGroup", "Donate");
                     });
 
-                    await signalRConnection.StartAsync();
+                    await SignalRConnection.StartAsync();
                 }
 
                 await LoadChain();
 
                 Console.WriteLine("=========================");
-                Console.WriteLine("1. Connect to a server");
+                Console.WriteLine("1. Connect to a node");
                 Console.WriteLine("2. Be A Leader");
-                Console.WriteLine("3. Sync Num Node");
+                Console.WriteLine("3. Sync Number of Node");
                 Console.WriteLine("4. Vote for New Leader");
-                Console.WriteLine("5. Get All Server that this client connect to");
+                Console.WriteLine("5. Get All nodes that this node connects to");
                 Console.WriteLine("6. Get Current Leader");
-                Console.WriteLine("7. Get Cool down");
-                Console.WriteLine("8. Exit");
+                Console.WriteLine("7. Get Cooldown");
+                Console.WriteLine("8. Search Transaction");
+                Console.WriteLine("9. Edit Transaction (For malicious node)");
+                Console.WriteLine("999. Exit");
                 Console.WriteLine("=========================");
 
                 int selection = 0;
-                while (selection != 8)
+                while (selection != 999)
                 {
                     switch (selection)
                     {   
                         case 1:
-                            Console.WriteLine("Please enter the server URL");
-                            string serverURL = Console.ReadLine();
-                            Client.Connect($"{serverURL}/Blockchain");
+                            Console.WriteLine("Please enter the port");
+                            string port = Console.ReadLine();
+                            Client.Connect($"{SocketUrl}{port}/Blockchain");
                             break;
                         case 2:
-                            // CurrentLeader = Program.Port;
-                            // CoolDown = Penalty();
-                            // Server.BroadcastLeader();
-                            // await signalRConnection.InvokeAsync("AddToGroup", "Donate");
-                            await Coup();
+                            if (IsChainValid)
+                                await Coup();
+                            else
+                                Console.WriteLine("The chain is invalid....");
                             break;
                         case 3:
                             NumNode = Client.GetServers().Count + 1;
@@ -148,7 +150,7 @@ namespace blockchain
                         case 4:
                             Client.Broadcast($"Decrease Cooldown");
                             Client.InvokeVote();
-                            await signalRConnection.InvokeAsync("RemoveFromGroup", "Donate");
+                            await SignalRConnection.InvokeAsync("RemoveFromGroup", "Donate");
                             break;
                         case 5:
                             Console.WriteLine(JsonConvert.SerializeObject(Client.GetServers(), Formatting.Indented));
@@ -160,6 +162,75 @@ namespace blockchain
                             Console.WriteLine($"CoolDown : {CoolDown}");
                             Console.WriteLine($"Penalty : {Penalty()}");
                             Console.WriteLine($"NumNode : {NumNode}");
+                            break;
+                        case 8:
+                            Console.WriteLine("Please enter the transactionId");
+                            string transactionId = Console.ReadLine();
+                            var searchedTransaction = _dbContext.Transactions
+                                                                .FirstOrDefault(x => x.HashedTransactionId == transactionId);
+                            
+                            if (searchedTransaction == null)
+                            {
+                                Console.WriteLine("Transaction not found!");
+                            }
+                            else
+                            {
+                                 Console.WriteLine(JsonConvert.SerializeObject(searchedTransaction));
+                            }                           
+                            break;
+                        case 9:
+                            Console.WriteLine("Please enter the transactionId");
+                            string editedTransactionId = Console.ReadLine();
+                            var transaction = _dbContext.Transactions
+                                                        .FirstOrDefault(x => x.HashedTransactionId == editedTransactionId);
+                            
+                            if (transaction == null)
+                            {
+                                Console.WriteLine("Transaction not found!");
+                            }
+                            else
+                            {
+                                var allTransactions = _dbContext.Transactions
+                                                                .Where(x => x.BlockHeight == transaction.BlockHeight)
+                                                                .ToList();
+                                
+                                transaction.Amount = 99999999999;
+                                transaction.HashedTransactionId = _hash.HashTransaction(transaction);
+                                
+                                foreach (var item in allTransactions)
+                                {
+                                    if (item.id == transaction.id)
+                                    {
+                                        item.HashedTransactionId = transaction.HashedTransactionId;
+                                        item.Amount = transaction.Amount;
+                                    }
+                                }
+
+                                if (Program.Port == 2222)
+                                {
+                                    var block = _dbContext.Blockchains1.FirstOrDefault(x => x.Height == transaction.BlockHeight);
+                                    var hashedTransactions = String.Join('-', allTransactions.Select(x => x.HashedTransactionId));
+                                    block.HashedTransactionIds = hashedTransactions;
+                                    block.Hash = _hash.HashBlock(block);
+                                }
+                                else if (Program.Port == 2223)
+                                {
+                                    var block = _dbContext.Blockchains1.FirstOrDefault(x => x.Height == transaction.BlockHeight);
+                                    var hashedTransactions = String.Join('-', allTransactions.Select(x => x.HashedTransactionId));
+                                    block.HashedTransactionIds = hashedTransactions;
+                                    block.Hash = _hash.HashBlock(block);
+                                }
+                                else
+                                {
+                                    var block = _dbContext.Blockchains1.FirstOrDefault(x => x.Height == transaction.BlockHeight);
+                                    var hashedTransactions = String.Join('-', allTransactions.Select(x => x.HashedTransactionId));
+                                    block.HashedTransactionIds = hashedTransactions;
+                                    block.Hash = _hash.HashBlock(block);
+                                }
+
+                                await _dbContext.SaveChangesAsync();
+                                Console.WriteLine("Done Changing Transaction.....");
+                            }
                             break;
                     }
                     Console.WriteLine("Please select an action");
@@ -179,7 +250,7 @@ namespace blockchain
                 }
 
                 Client.Close();
-                await signalRConnection.InvokeAsync("RemoveFromGroup", "Donate");
+                await SignalRConnection.InvokeAsync("RemoveFromGroup", "Donate");
             }
             // CreateHostBuilder(args).Build().Run();
         }
@@ -229,13 +300,13 @@ namespace blockchain
                 addedChain.Add(item);
             }
             _dbContext.SaveChanges();
-            chain = addedChain;
+            Chain = addedChain;
             return addedChain;
         }
 
         public static async Task Validate(Transaction transaction)
         {
-            Console.WriteLine($"New Transaction : {JsonConvert.SerializeObject(transaction)}");
+            Console.WriteLine($"New Transaction : {JsonConvert.SerializeObject(transaction)}\n");
             
             float moneyLeft = 999999999.00f;
             User fromUser = new User();
@@ -291,6 +362,7 @@ namespace blockchain
                     {
                         var foundations = _dbContext.Foundations.FirstOrDefault(x => x.NameEn == transaction.IntendedFoundation);
                         foundations.TotalUnDonate += transaction.Amount;
+                        transaction.FromAddress = _hash.CalculateHash(transaction.FromAddress);
                     }
                     
                     // foundations.TotalDonate += transaction.Amount;
@@ -332,6 +404,9 @@ namespace blockchain
                                                  .Take(block.MaxBlockSize)
                                                  .ToList();
                     
+                    var hashedTransactions = String.Join('-', transactions.Select(x => x.HashedTransactionId));
+                
+                    block.HashedTransactionIds = hashedTransactions;
                     block.Height = (prevBlock?.Height + 1) ?? 0;
                     block.PreviousHash = prevBlock?.Hash;
                     block.TransactionJsons = transactions != null ? JsonConvert.SerializeObject(transactions) : null;
@@ -339,8 +414,13 @@ namespace blockchain
                     block.Hash = _hash.HashBlock(block);
                     block.VerifiedBy = _hash.CalculateHash(Program.Port.ToString());
                     block.BlockSize = transactions.Count;
-                
+
+                    transactions.ForEach(x => x.BlockHeight = block.Height);
+
                     var serializedBlock = JsonConvert.SerializeObject(block);
+                    Console.WriteLine($"Transaction inside \n {JsonConvert.SerializeObject(transactions)}");
+                    Console.WriteLine($"BlockSize : {block.BlockSize}");
+                    Console.WriteLine($"Block : {serializedBlock}\n");
                     Client.Broadcast($"New Block : {serializedBlock}");
 
                     while (ConfirmedNumber < RequiredNumber() && ConfirmedNumber + RejectedNumber < NumNode)
@@ -375,42 +455,41 @@ namespace blockchain
                     RejectedNumber = 0;
                 }
             }
-            // Console.WriteLine("BOBOBO");
         }
 
         public static async Task LoadChain()
         {
-            chain =  new List<BlockGeneric>();
+            Chain =  new List<BlockGeneric>();
             if (Program.Port == 2222)
             {
                 var chainDB = await _dbContext.Blockchains1
-                                        .OrderBy(x => x.UnixTimeStamp)
-                                        .ToListAsync();
+                                              .OrderBy(x => x.UnixTimeStamp)
+                                              .ToListAsync();
             
-                chain.AddRange(chainDB);
+                Chain.AddRange(chainDB);
             }
             else if (Program.Port == 2223)
             {
                 var chainDB = await _dbContext.Blockchains2
-                                        .OrderBy(x => x.UnixTimeStamp)
-                                        .ToListAsync();
+                                              .OrderBy(x => x.UnixTimeStamp)
+                                              .ToListAsync();
             
-                chain.AddRange(chainDB);
+                Chain.AddRange(chainDB);
             }
             else
             {
                 var chainDB = await _dbContext.Blockchains3
-                                        .OrderBy(x => x.UnixTimeStamp)
-                                        .ToListAsync();
+                                              .OrderBy(x => x.UnixTimeStamp)
+                                              .ToListAsync();
             
-                chain.AddRange(chainDB);
+                Chain.AddRange(chainDB);
             }
         }
 
         public static void PreDonateToFoundationIfAble(Transaction donateTransaction)
         {
             var foundation = _dbContext.Foundations.FirstOrDefault(x => x.NameEn == donateTransaction.IntendedFoundation);
-            Console.WriteLine(JsonConvert.SerializeObject(foundation));
+            // Console.WriteLine(JsonConvert.SerializeObject(foundation));
             if (foundation != null && foundation.TotalUnDonate >= foundation.DonateGoal)
             {
                 // Console.WriteLine("SSS");
@@ -423,9 +502,9 @@ namespace blockchain
 
         public static async Task DonateToFoundationIfAble()
         {
-            // Console.WriteLine("KUY");
             var foundation = TempFoundation;
             Transaction donateTransaction = TempDonateTransaction;
+            Console.WriteLine($"Transaction : {JsonConvert.SerializeObject(foundation)}");
             var blockCharFoundation = _dbContext.Foundations
                                                 .OrderBy(x => x.id)
                                                 .LastOrDefault();
@@ -443,34 +522,26 @@ namespace blockchain
                              };
 
            
-            // Console.WriteLine("FCKING SHIT");
+            
             await Validate(transaction);
-            // await signalRConnection.InvokeAsync("DonateToFoundation", transaction);
             TempFoundation = null;
             TempDonateTransaction = null;
             IsDonatable = false;
-            Console.WriteLine("Done!");
-            // await ChangeLeader();
-            // Client.Broadcast($"Decrease Cooldown");
-
-            // Client.InvokeVote();
-            // await signalRConnection.InvokeAsync("RemoveFromGroup", "Donate");
-
-            // Console.WriteLine("DAMN METHOD");
+            Console.WriteLine("Donated Money to foundation.....");
         }
 
         public static async Task Coup()
         {
-            Console.WriteLine("Change Leader");
+            Console.WriteLine("Be a Leader....");
             CurrentLeader = Program.Port;
             CoolDown = Penalty();
             Server.BroadcastLeader();
-            await signalRConnection.InvokeAsync("AddToGroup", "Donate");
+            await SignalRConnection.InvokeAsync("AddToGroup", "Donate");
         }
 
         public static async Task JoinLeaderChannel()
         {
-            await signalRConnection.InvokeAsync("AddToGroup", "Donate");
+            await SignalRConnection.InvokeAsync("AddToGroup", "Donate");
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>

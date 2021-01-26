@@ -12,15 +12,21 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.SignalR;
 using blockchain.SignalR;
 using blockchain.Extensions;
+using Newtonsoft.Json;
+using blockchain.Providers.Interfaces;
 
 namespace blockchain.Controllers
 {
     public class DonateController : BaseController
     {
         private readonly IHubContext<DonateHub, IHubProvider> _hub;
-        public DonateController(ApplicationDbContext db, IHubContext<DonateHub, IHubProvider> hub) : base(db) 
+        private readonly IHashProvider _hash;
+        public DonateController(ApplicationDbContext db, 
+                                IHubContext<DonateHub, IHubProvider> hub,
+                                IHashProvider hash) : base(db) 
         { 
             _hub = hub;
+            _hash = hash;
         }
 
         public IActionResult Index()
@@ -36,6 +42,20 @@ namespace blockchain.Controllers
 
             ViewBag.Foundations = foundations;
             return View(new DonateViewModel { FromAddress = Program.Name });
+        }
+        
+        [HttpGet("transactions/{userName}")]
+        public IActionResult Transactions(string userName)
+        {
+            var hashedUserName = _hash.CalculateHash(userName);
+
+            var transactions = _db.Transactions
+                                  .Where(x => x.FromAddress == userName || x.FromAddress == hashedUserName)
+                                  .ToList();
+            
+            var totalDonated = transactions.Where(x => x.IsDonated).Sum(x => x.Amount);
+            var totalUnDonated = transactions.Where(x => !x.IsDonated).Sum(x => x.Amount);
+            return Json(new { totalDonated, totalUnDonated, transactions });
         }
 
         [HttpPost]

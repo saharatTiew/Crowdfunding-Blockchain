@@ -26,7 +26,7 @@ namespace blockchain.Providers
 
         public string HashBlock(BlockGeneric block)
         {
-            return CalculateHash($"{block.UnixTimeStamp}-{block.PreviousHash ?? ""}-{block.TransactionJsons}");
+            return CalculateHash($"{block.UnixTimeStamp}-{block.PreviousHash ?? ""}-{block.HashedTransactionIds}");
         }
 
         // public void Mine(Block block, int difficulty)

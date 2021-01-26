@@ -62,7 +62,7 @@ namespace blockchain.Models.BlockchainModels
                 Console.WriteLine($"Cooldown : {Program.CoolDown}");
                 if (Program.CoolDown > 0)
                 {
-                    Console.WriteLine("Cooldown Remain.....");
+                    // Console.WriteLine("Cooldown Remain.....");
                     Send("Not Applicable For Leader");
                 }
                 else
@@ -158,7 +158,7 @@ namespace blockchain.Models.BlockchainModels
                 // Console.WriteLine(serealizedBlock);
                 // Console.WriteLine(JsonConvert.SerializeObject(Program.chain.Last(), Formatting.Indented));
                 
-                var isValid = _blockchainProvider.IsBlockValid(Program.chain.Last(), newBlock);
+                var isValid = _blockchainProvider.IsBlockValid(Program.Chain.Last(), newBlock);
 
                 if (isValid)
                 {
@@ -204,37 +204,49 @@ namespace blockchain.Models.BlockchainModels
             }
             else
             {
+                var information = e.Data.Split(" : ");
+                var chain = information[2];
+                var port = information[1];
+
                 List<BlockGeneric> newChain;
 
                 if (Program.Port == 2222)
                 {
-                    var tempChain = JsonConvert.DeserializeObject<List<Block1>>(e.Data);
+                    var tempChain = JsonConvert.DeserializeObject<List<Block1>>(chain);
                     newChain = tempChain.Cast<BlockGeneric>().ToList();
                 }
                 else if (Program.Port == 2223)
                 {
-                    var tempChain = JsonConvert.DeserializeObject<List<Block2>>(e.Data);
+                    var tempChain = JsonConvert.DeserializeObject<List<Block2>>(chain);
                     newChain = tempChain.Cast<BlockGeneric>().ToList();
                 }
                 else
                 {
-                    var tempChain = JsonConvert.DeserializeObject<List<Block3>>(e.Data);
+                    var tempChain = JsonConvert.DeserializeObject<List<Block3>>(chain);
                     newChain = tempChain.Cast<BlockGeneric>().ToList();
                 }
 
-                // Console.WriteLine(JsonConvert.SerializeObject(Program.chain, Formatting.Indented));
-
-                if (_blockchainProvider.IsBlockchainValid(newChain) && newChain.Count > Program.chain.Count)
+                // Console.WriteLine(JsonConvert.SerializeObject(newChain.TakeLast(5), Formatting.Indented));
+                
+                var isBlockchainValid = _blockchainProvider.IsBlockchainValid(newChain);
+                // Console.WriteLine(isBlockchainValid);
+                if (isBlockchainValid && newChain.Count > Program.Chain.Count)
                 {
-                    Console.WriteLine("Updated Chain.....");
+                    Console.WriteLine("Updating new chain.....");
                     Program.DeleteChains(newChain);
+                }
+                else if (!isBlockchainValid)
+                {
+                    // TODO : Disconnect the node that has the corrupted chain
+                    Program.IsChainValid = false;
+                    Console.WriteLine("The new chain is invalid...");
                 }
 
                 if (!IsChainSynced)
                 {
                     // Console.WriteLine("Sending...");
                     // Console.WriteLine(JsonConvert.SerializeObject(Program.chain));
-                    Send(JsonConvert.SerializeObject(Program.chain));
+                    Send($"From Port : {Program.Port} : {JsonConvert.SerializeObject(Program.Chain)}");
                     // IsChainSynced = true;
                 }
             }
