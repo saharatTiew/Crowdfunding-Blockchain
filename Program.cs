@@ -122,6 +122,7 @@ namespace blockchain
                 Console.WriteLine("7. Get Cooldown");
                 Console.WriteLine("8. Search Transaction");
                 Console.WriteLine("9. Edit Transaction (For malicious node)");
+                Console.WriteLine("10. Get Chains");
                 Console.WriteLine("999. Exit");
                 Console.WriteLine("=========================");
 
@@ -182,6 +183,7 @@ namespace blockchain
                             Console.WriteLine("Please enter the transactionId");
                             string editedTransactionId = Console.ReadLine();
                             var transaction = _dbContext.Transactions
+                                                        .AsNoTracking()
                                                         .FirstOrDefault(x => x.HashedTransactionId == editedTransactionId);
                             
                             if (transaction == null)
@@ -192,9 +194,10 @@ namespace blockchain
                             {
                                 var allTransactions = _dbContext.Transactions
                                                                 .Where(x => x.BlockHeight == transaction.BlockHeight)
+                                                                .AsNoTracking()
                                                                 .ToList();
                                 
-                                transaction.Amount = 99999999999;
+                                transaction.Amount = 5000;
                                 transaction.HashedTransactionId = _hash.HashTransaction(transaction);
                                 
                                 foreach (var item in allTransactions)
@@ -231,6 +234,9 @@ namespace blockchain
                                 await _dbContext.SaveChangesAsync();
                                 Console.WriteLine("Done Changing Transaction.....");
                             }
+                            break;
+                        case 10:
+                            Console.WriteLine(JsonConvert.SerializeObject(Chain, Formatting.Indented));
                             break;
                     }
                     Console.WriteLine("Please select an action");
@@ -306,7 +312,8 @@ namespace blockchain
 
         public static async Task Validate(Transaction transaction)
         {
-            Console.WriteLine($"New Transaction : {JsonConvert.SerializeObject(transaction)}\n");
+            var transactionStrings = JsonConvert.SerializeObject(transaction, Formatting.Indented);
+            Console.WriteLine($"New Transaction : {transactionStrings} \n");
             
             float moneyLeft = 999999999.00f;
             User fromUser = new User();
@@ -324,7 +331,10 @@ namespace blockchain
             else
             {
                 if (!IsDonatable)
+                {
+                    Console.WriteLine("User's Money : " + JsonConvert.SerializeObject(fromUser));
                     fromUser.RemainingMoney -= transaction.Amount;
+                }
 
                 transaction.HashedTransactionId = _hash.HashTransaction(transaction);
                 var serializedTransaction = JsonConvert.SerializeObject(transaction);
@@ -372,7 +382,7 @@ namespace blockchain
                     ConfirmedNumber = 1;
                     RejectedNumber = 0;
                     Console.WriteLine("Added Transaction.....");
-                    await Task.Delay(1000);
+                    await Task.Delay(5000);
                     
                     BlockGeneric block;
                     BlockGeneric prevBlock;
@@ -417,8 +427,8 @@ namespace blockchain
 
                     transactions.ForEach(x => x.BlockHeight = block.Height);
 
-                    var serializedBlock = JsonConvert.SerializeObject(block);
-                    Console.WriteLine($"Transaction inside \n {JsonConvert.SerializeObject(transactions)}");
+                    var serializedBlock = JsonConvert.SerializeObject(block, Formatting.Indented);
+                    Console.WriteLine($"Transaction inside \n {JsonConvert.SerializeObject(transactions, Formatting.Indented)}");
                     Console.WriteLine($"BlockSize : {block.BlockSize}");
                     Console.WriteLine($"Block : {serializedBlock}\n");
                     Client.Broadcast($"New Block : {serializedBlock}");
@@ -527,7 +537,7 @@ namespace blockchain
             TempFoundation = null;
             TempDonateTransaction = null;
             IsDonatable = false;
-            Console.WriteLine("Donated Money to foundation.....");
+            Console.WriteLine("Donated Money to project.....");
         }
 
         public static async Task Coup()

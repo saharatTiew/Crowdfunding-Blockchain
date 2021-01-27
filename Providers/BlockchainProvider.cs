@@ -32,7 +32,7 @@ namespace blockchain.Providers
 
                 if (currentBlock.PreviousHash != previousBlock.Hash)
                 {
-                    Console.WriteLine($"The previous hash of the block is invalid at height {i}");
+                    Console.WriteLine($"The previous hash of the block is invalid at height {i-1}");
                     return false;
                 }
             }

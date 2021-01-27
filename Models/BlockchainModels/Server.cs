@@ -102,7 +102,7 @@ namespace blockchain.Models.BlockchainModels
                 var transaction = JsonConvert.DeserializeObject<Transaction>(serealizedTransaction);
                 Console.WriteLine(serealizedTransaction);
                 var fromUser = await _dbContext.Users.FirstOrDefaultAsync(x => x.Username == transaction.FromAddress);
-                Console.WriteLine(JsonConvert.SerializeObject(fromUser));
+                Console.WriteLine(JsonConvert.SerializeObject(fromUser, Formatting.Indented));
 
                 if (transaction.FromAddress == (await _dbContext.Foundations.OrderBy(x => x.id).LastOrDefaultAsync()).NameEn)
                 {

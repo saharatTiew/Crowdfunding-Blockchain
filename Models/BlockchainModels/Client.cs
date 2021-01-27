@@ -136,6 +136,7 @@ namespace blockchain.Models.BlockchainModels
                 {
                     Console.WriteLine("The chain is invalid...");
                     Program.IsChainValid = false;
+                    // Remove();
                 }
                 ws.Send($"Hi Server : {Program.Port}");
                 ws.Send($"From Port : {Program.Port} : {JsonConvert.SerializeObject(Program.Chain)}");
